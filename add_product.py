@@ -1,12 +1,14 @@
-import sys
+import sys, os
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import Qt
 import sqlite3
+from PIL import Image
 
 con = sqlite3.connect("product.db")
 cur = con.cursor()
 
+default_img = "store.png"
 
 class AddProduct(QWidget):
     def __init__(self):
@@ -39,7 +41,9 @@ class AddProduct(QWidget):
         self.quota_entry = QLineEdit()
         self.quota_entry.setPlaceholderText("Enter quota of product")
         self.upload_btn = QPushButton("Upload")
+        self.upload_btn.clicked.connect(self.upload_img)
         self.submit_btn = QPushButton("Submit")
+        self.submit_btn.clicked.connect(self.add_product)
 
     def layouts(self):
         self.main_layout = QVBoxLayout()
@@ -66,3 +70,33 @@ class AddProduct(QWidget):
         self.main_layout.addWidget(self.top_frame)
         self.main_layout.addWidget(self.bottom_frame)
         self.setLayout(self.main_layout)
+
+    def upload_img(self):
+        global default_img
+        size = (256, 256)
+        self.filename, ok = QFileDialog.getOpenFileName(self, "Upload Image", "", "Image Files (*.jpg *.png)")
+        if ok:
+            default_img = os.path.basename(self.filename)
+            img = Image.open(self.filename)
+            img = img.resize(size)
+            img.save("images/{0}".format(default_img))
+
+    def add_product(self):
+        global default_img
+        name = self.name_entry.text()
+        manufacturer = self.manufacturer_entry.text()
+        price = self.price_entry.text()
+        quota = self.quota_entry.text()
+
+        if(name and manufacturer and price and quota != ""):
+            try:
+                print("hello")
+                query = "INSERT INTO 'product' (product_name, product_manufacturer, product_price, product_quota, product_img) VALUES (?, ?, ?, ?, ?))"
+                cur.execute(query, (name, manufacturer, price, quota, default_img))
+                con.commit()
+                QMessageBox.information(self, "Info", "Product has been added")
+                con.close()
+            except:
+                QMessageBox.information(self, "Info", "Product has not been added")
+        else:
+            QMessageBox.information(self, "Info", "Fields cannot be empty!")
