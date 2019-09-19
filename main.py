@@ -2,6 +2,11 @@ import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import Qt
+import sqlite3
+import add_product, add_member
+
+con = sqlite3.connect("product.db")
+cur = con.cursor()
 
 
 class Main(QMainWindow):
@@ -24,16 +29,19 @@ class Main(QMainWindow):
     def tool_bar(self):
         self.tb = self.addToolBar("Tool Bar")
         self.tb.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+
         ##### Toolbar Buttons #####
 
         ##### Add Product #########
         self.add_product = QAction(QIcon("icons/add.png"), "Add Product", self)
         self.tb.addAction(self.add_product)
+        self.add_product.triggered.connect(self.func_add_product)
         self.tb.addSeparator()
 
         ##### Add Member ##########
         self.add_member = QAction(QIcon("icons/addmember.png"), "Add Member", self)
         self.tb.addAction(self.add_member)
+        self.add_member.triggered.connect(self.func_add_member)
         self.tb.addSeparator()
 
         ##### Add Member ##########
@@ -148,7 +156,11 @@ class Main(QMainWindow):
         self.member_main_layout.addWidget(self.member_right_group_box, 30)
         self.tab2.setLayout(self.member_main_layout)
 
+    def func_add_product(self):
+        self.new_product = add_product.AddProduct()
 
+    def func_add_member(self):
+        self.new_member = add_member.AddMember()
 
 
 def main():

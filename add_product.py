@@ -88,10 +88,9 @@ class AddProduct(QWidget):
         price = self.price_entry.text()
         quota = self.quota_entry.text()
 
-        if(name and manufacturer and price and quota != ""):
+        if name and manufacturer and price and quota != "":
             try:
-                print("hello")
-                query = "INSERT INTO 'product' (product_name, product_manufacturer, product_price, product_quota, product_img) VALUES (?, ?, ?, ?, ?))"
+                query = "INSERT INTO 'product' (product_name, product_manufacturer, product_price, product_quota, product_img) VALUES (?,?,?,?,?)"
                 cur.execute(query, (name, manufacturer, price, quota, default_img))
                 con.commit()
                 QMessageBox.information(self, "Info", "Product has been added")
