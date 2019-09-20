@@ -25,6 +25,7 @@ class Main(QMainWindow):
         self.tab_widget()
         self.widgets()
         self.layouts()
+        self.display_products()
 
     def tool_bar(self):
         self.tb = self.addToolBar("Tool Bar")
@@ -162,6 +163,19 @@ class Main(QMainWindow):
     def func_add_member(self):
         self.new_member = add_member.AddMember()
 
+    def display_products(self):
+        self.products_table.setFont(QFont("Arial", 12))
+        for i in reversed(range(self.products_table.rowCount())):
+            self.products_table.removeRow(i)
+
+        query = cur.execute("SELECT product_id, product_name, product_manufacturer, product_price, product_quota, product_availability FROM product")
+        for row_data in query:
+            row_number = self.products_table.rowCount()
+            self.products_table.insertRow(row_number)
+            for column_number, data in enumerate(row_data):
+                self.products_table.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+
+        self.products_table.setEditTriggers(QAbstractItemView.NoEditTriggers) # prevents user editing table
 
 def main():
     App = QApplication(sys.argv)
