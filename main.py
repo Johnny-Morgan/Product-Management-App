@@ -1,9 +1,10 @@
-import sys
+import sys, os
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import Qt
 import sqlite3
 import add_product, add_member
+from PIL import Image
 
 con = sqlite3.connect("product.db")
 cur = con.cursor()
@@ -102,6 +103,10 @@ class Main(QMainWindow):
         self.members_table.setHorizontalHeaderItem(1, QTableWidgetItem("Member Name"))
         self.members_table.setHorizontalHeaderItem(2, QTableWidgetItem("Member Surname"))
         self.members_table.setHorizontalHeaderItem(3, QTableWidgetItem("Phone"))
+        self.members_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.members_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.members_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        self.members_table.doubleClicked.connect(self.selected_member)
         self.member_search_text = QLabel("Search Members")
         self.member_search_entry = QLineEdit()
         self.member_search_button = QPushButton("Search")
@@ -205,13 +210,90 @@ class Main(QMainWindow):
         self.display = DisplayProduct()
         self.display.show()
 
+    def selected_member(self):
+        global member_id
+        member_list = []
+        for i in range(0, 4):
+            member_list.append(self.members_table.item(self.members_table.currentRow(), i).text())
+
+        member_id = member_list[0]
+        self.display_member = DisplayMember()
+        self.display_member.show()
+
+
+class DisplayMember(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle(" Member Details")
+        self.setWindowIcon(QIcon("icons/icon.ico"))
+        self.setGeometry(500, 200, 350, 600)
+        self.setFixedSize(self.size())
+        self.UI()
+        self.show()
+
+    def UI(self):
+        self.member_details()
+        self.widgets()
+        self.layouts()
+
+    def member_details(self):
+        global member_id
+        query = "SELECT * FROM member WHERE member_id = ?"
+        member = cur.execute(query, (member_id, )).fetchone()
+        self.member_name = member[1]
+        self.member_surname = member[2]
+        self.member_phone = member[3]
+
+    def widgets(self):
+        ##### Top Layout Widgets #####
+        self.member_img = QLabel()
+        self.img = QPixmap("icons/members.png")
+        self.member_img.setPixmap(self.img)
+        self.member_img.setAlignment(Qt.AlignCenter)
+        self.title_text = QLabel("Display Member")
+        self.title_text.setAlignment(Qt.AlignCenter)
+
+        ##### Bottom Layout Widgets #####
+        self.name_entry = QLineEdit()
+        self.name_entry.setText(self.member_name)
+        self.surname_entry = QLineEdit()
+        self.surname_entry.setText(self.member_surname)
+        self.phone_entry = QLineEdit()
+        self.phone_entry.setText(self.member_phone)
+        self.update_btn = QPushButton("Update")
+        #self.update_btn.clicked.connect(self.update_product)
+        self.delete_btn = QPushButton("Delete")
+        #self.delete_btn.clicked.connect(self.delete_product)
+
+    def layouts(self):
+        self.main_layout = QVBoxLayout()
+        self.top_layout = QVBoxLayout()
+        self.bottom_layout = QFormLayout()
+        self.top_frame = QFrame()
+        self.bottom_frame = QFrame()
+
+        ##### Add Widgets #####
+        self.top_layout.addWidget(self.title_text)
+        self.top_layout.addWidget(self.member_img)
+        self.top_frame.setLayout(self.top_layout)
+        self.bottom_layout.addRow(QLabel("Name:"), self.name_entry)
+        self.bottom_layout.addRow(QLabel("Surname:"), self.surname_entry)
+        self.bottom_layout.addRow(QLabel("Phone:"), self.phone_entry)
+        self.bottom_layout.addRow(QLabel(""), self.update_btn)
+        self.bottom_layout.addRow(QLabel(""), self.delete_btn)
+        self.bottom_frame.setLayout(self.bottom_layout)
+        self.main_layout.addWidget(self.top_frame)
+        self.main_layout.addWidget(self.bottom_frame)
+
+        self.setLayout(self.main_layout)
+
 
 class DisplayProduct(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(" Product Details")
         self.setWindowIcon(QIcon("icons/icon.ico"))
-        self.setGeometry(450, 150, 350, 600)
+        self.setGeometry(500, 200, 350, 600)
         self.setFixedSize(self.size())
         self.UI()
         self.show()
@@ -231,7 +313,6 @@ class DisplayProduct(QWidget):
         self.product_quota = product[4]
         self.product_img = product[5]
         self.product_status = product[6]
-
 
     def widgets(self):
         ##### Top Layout Widgets #####
@@ -254,8 +335,11 @@ class DisplayProduct(QWidget):
         self.availability_combo = QComboBox()
         self.availability_combo.addItems(["Available", "Unavailable"])
         self.upload_btn = QPushButton("Upload")
+        self.upload_btn.clicked.connect(self.upload_img)
         self.delete_btn = QPushButton("Delete")
+        self.delete_btn.clicked.connect(self.delete_product)
         self.update_btn = QPushButton("Update")
+        self.update_btn.clicked.connect(self.update_product)
 
     def layouts(self):
         self.main_layout = QVBoxLayout()
@@ -281,6 +365,53 @@ class DisplayProduct(QWidget):
         self.main_layout.addWidget(self.bottom_frame)
 
         self.setLayout(self.main_layout)
+
+    def upload_img(self):
+        size = (256, 256)
+        self.file_name, ok = QFileDialog.getOpenFileName(self, "Upload Image", "", "Image Files (*.jpg *.png)")
+        if ok:
+            self.product_image = os.path.basename(self.file_name)
+            img = Image.open(self.file_name)
+            img = img.resize(size)
+            img.save("images/{}".format(self.product_image))
+
+    def update_product(self):
+        global product_id
+        name = self.name_entry.text()
+        manufacturer = self.manufacturer_entry.text()
+        price = int(self.price_entry.text())  # cast to int
+        quota = int(self.quota_entry.text())  # cast to int
+        status = self.availability_combo.currentText()
+        default_image = self.product_image
+
+        if name and manufacturer and price and quota != "":
+            try:
+                query = "UPDATE product SET product_name = ?, product_manufacturer = ?, product_price = ?, " \
+                        "product_quota = ?, product_img = ?, product_availability = ? WHERE product_id = ?"
+                cur.execute(query, (name, manufacturer, price, quota, default_image, status, product_id))
+                con.commit()
+                QMessageBox.information(self, "Info", "Product has been updated")
+                con.close()
+                self.close()
+            except:
+                QMessageBox.information(self, "Warning", "Product has not been updated")
+        else:
+            QMessageBox.information(self, "Warning", "Fields cannot be empty")
+
+    def delete_product(self):
+        global product_id
+        mbox = QMessageBox.question(self, "Warning", "Are you sure you want to delete this product?",
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if mbox == QMessageBox.Yes:
+            try:
+                query = "DELETE FROM product WHERE product_id = ?"
+                cur.execute(query, (product_id,))
+                con.commit()
+                QMessageBox.information(self, "Info", "Product has been deleted")
+                self.close()
+            except:
+                QMessageBox.information(self, "Warning", "Product has not been deleted")
+
 
 def main():
     App = QApplication(sys.argv)
