@@ -86,12 +86,14 @@ class Main(QMainWindow):
         self.search_entry = QLineEdit()
         self.search_entry.setPlaceholderText("Search For Products")
         self.search_button = QPushButton("Search")
+        self.search_button.clicked.connect(self.search_products)
 
         ##### Right Middle Layout Widgets #####
         self.all_products = QRadioButton("All Products")
         self.available_products = QRadioButton("Available")
         self.not_available_products = QRadioButton("Not Available")
         self.list_button = QPushButton("List")
+        self.list_button.clicked.connect(self.list_products)
 
         ########################
         ##### Tab2 Widgets #####
@@ -110,6 +112,7 @@ class Main(QMainWindow):
         self.member_search_text = QLabel("Search Members")
         self.member_search_entry = QLineEdit()
         self.member_search_button = QPushButton("Search")
+        self.member_search_button.clicked.connect(self.search_members)
 
     def layouts(self):
         ########################
@@ -220,6 +223,76 @@ class Main(QMainWindow):
         self.display_member = DisplayMember()
         self.display_member.show()
 
+    def search_products(self):
+        value = self.search_entry.text()
+        if value == "":
+            QMessageBox.information(self, "Warning", "Search query cannot be empty!")
+        else:
+            self.search_entry.setText("")
+
+            query = "SELECT product_id, product_name, product_manufacturer, product_price, product_quota, product_availability " \
+                    "FROM product WHERE product_name LIKE ? OR product_manufacturer LIKE ?"
+            results = cur.execute(query, ("%" + value + "%", "%" + value + "%")).fetchall()
+
+            if results == []:
+                QMessageBox.information(self, "Warning", "There is no such product or manufacturer")
+            else:
+                for i in reversed(range(self.products_table.rowCount())):
+                    self.products_table.removeRow(i)  # clear table
+                for row_data in results:
+                    row_number = self.products_table.rowCount()
+                    self.products_table.insertRow(row_number)
+                    for column_number, data in enumerate(row_data):
+                        self.products_table.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+
+    def search_members(self):
+        value = self.member_search_entry.text()
+        if value == "":
+            QMessageBox.information(self, "Warning", "Search query cannot be empty!")
+        else:
+            self.member_search_entry.setText("")
+
+            query = "SELECT * FROM member WHERE member_name LIKE ? OR member_surname LIKE ? OR member_phone LIKE ?"
+            results = cur.execute(query, ("%" + value + "%", "%" + value + "%", "%" + value + "%")).fetchall()
+
+            if results == []:
+                QMessageBox.information(self, "Warning", "There is no such member")
+            else:
+                for i in reversed(range(self.members_table.rowCount())):
+                    self.members_table.removeRow(i)  # clear table
+                for row_data in results:
+                    row_number = self.members_table.rowCount()
+                    self.members_table.insertRow(row_number)
+                    for column_number, data in enumerate(row_data):
+                        self.members_table.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+
+    def list_products(self):
+        if self.all_products.isChecked():
+            self.display_products()
+        elif self.available_products.isChecked():
+            query = "SELECT product_id, product_name, product_manufacturer, product_price, product_quota, product_availability " \
+                    "FROM product WHERE product_availability = 'Available' "
+            products = cur.execute(query).fetchall()
+            for i in reversed(range(self.products_table.rowCount())):
+                self.products_table.removeRow(i)  # clear table
+            for row_data in products:
+                row_number = self.products_table.rowCount()
+                self.products_table.insertRow(row_number)
+                for column_number, data in enumerate(row_data):
+                    self.products_table.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+
+        elif self.not_available_products.isChecked():
+            query = "SELECT product_id, product_name, product_manufacturer, product_price, product_quota, product_availability " \
+                    "FROM product WHERE product_availability = 'Unavailable' "
+            products = cur.execute(query).fetchall()
+            for i in reversed(range(self.products_table.rowCount())):
+                self.products_table.removeRow(i)  # clear table
+            for row_data in products:
+                row_number = self.products_table.rowCount()
+                self.products_table.insertRow(row_number)
+                for column_number, data in enumerate(row_data):
+                    self.products_table.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+
 
 class DisplayMember(QWidget):
     def __init__(self):
@@ -261,9 +334,9 @@ class DisplayMember(QWidget):
         self.phone_entry = QLineEdit()
         self.phone_entry.setText(self.member_phone)
         self.update_btn = QPushButton("Update")
-        #self.update_btn.clicked.connect(self.update_product)
+        self.update_btn.clicked.connect(self.update_member)
         self.delete_btn = QPushButton("Delete")
-        #self.delete_btn.clicked.connect(self.delete_product)
+        self.delete_btn.clicked.connect(self.delete_member)
 
     def layouts(self):
         self.main_layout = QVBoxLayout()
@@ -286,6 +359,39 @@ class DisplayMember(QWidget):
         self.main_layout.addWidget(self.bottom_frame)
 
         self.setLayout(self.main_layout)
+
+    def update_member(self):
+        global member_id
+        name = self.name_entry.text()
+        surname = self.surname_entry.text()
+        phone = self.phone_entry.text()
+
+        if name and surname and phone != "":
+            try:
+                query = "UPDATE member SET member_name = ?, member_surname = ?, member_phone = ? WHERE member_id = ?"
+                cur.execute(query, (name, surname, phone, member_id))
+                con.commit()
+                QMessageBox.information(self, "Info", "Member has been updated")
+                con.close()
+                self.close()
+            except:
+                QMessageBox.information(self, "Warning", "Member has not been updated")
+        else:
+            QMessageBox.information(self, "Warning", "Fields cannot be empty")
+
+    def delete_member(self):
+        global member_id
+        mbox = QMessageBox.question(self, "Warning", "Are you sure you want to delete this member?",
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if mbox == QMessageBox.Yes:
+            try:
+                query = "DELETE FROM member WHERE member_id = ?"
+                cur.execute(query, (member_id,))
+                con.commit()
+                QMessageBox.information(self, "Info", "Member has been deleted")
+                self.close()
+            except:
+                QMessageBox.information(self, "Info", "Member has not been deleted")
 
 
 class DisplayProduct(QWidget):
