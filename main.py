@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import Qt
 import sqlite3
-import add_product, add_member
+import add_product, add_member, sales
 from PIL import Image
 
 con = sqlite3.connect("product.db")
@@ -50,6 +50,7 @@ class Main(QMainWindow):
         ##### Add Member ##########
         self.sell_product = QAction(QIcon("icons/sell.png"), "Sell Product", self)
         self.tb.addAction(self.sell_product)
+        self.sell_product.triggered.connect(self.func_sell_product)
         self.tb.addSeparator()
 
     def tab_widget(self):
@@ -292,6 +293,9 @@ class Main(QMainWindow):
                 self.products_table.insertRow(row_number)
                 for column_number, data in enumerate(row_data):
                     self.products_table.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+
+    def func_sell_product(self):
+        self.sell = sales.SellProduct()
 
 
 class DisplayMember(QWidget):
