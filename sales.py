@@ -136,7 +136,7 @@ class ConfirmWindow(QWidget):
         self.amount_label = QLabel()
         self.amount_label.setText(str(price[0]) + " x " + str(quantity) + " = " + str(self.amount))
         self.confirm_btn = QPushButton("Confirm")
-        #self.confirm_btn.clicked.connect(self.confirm_sale)
+        self.confirm_btn.clicked.connect(self.confirm_sale)
 
     def layouts(self):
         self.main_layout = QVBoxLayout()
@@ -163,4 +163,25 @@ class ConfirmWindow(QWidget):
 
         self.setLayout(self.main_layout)
 
+    def confirm_sale(self):
+        global product_name, product_id, member_name, member_id, quantity
+        try:
+            sale_query = "INSERT INTO sale (sale_product_id, sale_member_id, sale_quantity, sale_amount) VALUES (?, ?, ?, ?)"
+            cur.execute(sale_query, (product_id, member_id, quantity, self.amount))
+            quota_query = "SELECT product_quota FROM product WHERE product_id = ?"
+            self.quota = cur.execute(quota_query, (product_id,)).fetchone()
+            con.commit()
 
+            if quantity == self.quota[0]:
+                update_quota_query = "UPDATE product SET product_quota = ?, product_availability = ? WHERE product_id = ?"
+                cur.execute(update_quota_query, (0, "Unavailable", product_id))
+                con.commit()
+            else:
+                update_quota_query = "UPDATE product SET product_quota = ? WHERE product_id = ?"
+                cur.execute(update_quota_query, (self.quota[0] - quantity, product_id))
+                con.commit()
+
+            QMessageBox.information(self, "Info", "Successful update")
+
+        except:
+            QMessageBox.warning(self, "Warning", "Something went wrong")

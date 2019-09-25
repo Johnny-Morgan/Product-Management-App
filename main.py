@@ -115,6 +115,14 @@ class Main(QMainWindow):
         self.member_search_button = QPushButton("Search")
         self.member_search_button.clicked.connect(self.search_members)
 
+        ########################
+        ##### Tab3 Widgets #####
+        ########################
+        self.total_products_label = QLabel()
+        self.total_members_label = QLabel()
+        self.sold_products_label = QLabel()
+        self.total_amount_label = QLabel()
+
     def layouts(self):
         ########################
         ##### Tab1 layouts #####
@@ -169,6 +177,22 @@ class Main(QMainWindow):
         self.member_main_layout.addLayout(self.member_left_layout, 70)
         self.member_main_layout.addWidget(self.member_right_group_box, 30)
         self.tab2.setLayout(self.member_main_layout)
+
+        ########################
+        ##### Tab3 layouts #####
+        ########################
+        self.statistics_main_layout = QVBoxLayout()
+        self.statistics_layout = QFormLayout()
+        self.statistics_groupbox = QGroupBox("Statistics")
+        self.statistics_layout.addRow("Total Products:", self.total_products_label)
+        self.statistics_layout.addRow("Total Members:", self.total_members_label)
+        self.statistics_layout.addRow("Sold Products:", self.sold_products_label)
+        self.statistics_layout.addRow("Total Amount:", self.total_amount_label)
+
+        self.statistics_groupbox.setLayout(self.statistics_layout)
+        self.statistics_groupbox.setFont(QFont("Arial", 14))
+        self.statistics_main_layout.addWidget(self.statistics_groupbox)
+        self.tab3.setLayout(self.statistics_main_layout)
 
     def func_add_product(self):
         self.new_product = add_product.AddProduct()
