@@ -28,6 +28,7 @@ class Main(QMainWindow):
         self.layouts()
         self.display_products()
         self.display_members()
+        self.get_statistics()
 
     def tool_bar(self):
         self.tb = self.addToolBar("Tool Bar")
@@ -47,7 +48,7 @@ class Main(QMainWindow):
         self.add_member.triggered.connect(self.func_add_member)
         self.tb.addSeparator()
 
-        ##### Add Member ##########
+        ##### Sell Product ##########
         self.sell_product = QAction(QIcon("icons/sell.png"), "Sell Product", self)
         self.tb.addAction(self.sell_product)
         self.sell_product.triggered.connect(self.func_sell_product)
@@ -55,6 +56,8 @@ class Main(QMainWindow):
 
     def tab_widget(self):
         self.tabs = QTabWidget()
+        self.tabs.blockSignals(True)
+        self.tabs.currentChanged.connect(self.tab_changed)
         self.setCentralWidget(self.tabs)
         self.tab1 = QWidget()
         self.tab2 = QWidget()
@@ -184,15 +187,16 @@ class Main(QMainWindow):
         self.statistics_main_layout = QVBoxLayout()
         self.statistics_layout = QFormLayout()
         self.statistics_groupbox = QGroupBox("Statistics")
-        self.statistics_layout.addRow("Total Products:", self.total_products_label)
-        self.statistics_layout.addRow("Total Members:", self.total_members_label)
-        self.statistics_layout.addRow("Sold Products:", self.sold_products_label)
-        self.statistics_layout.addRow("Total Amount:", self.total_amount_label)
+        self.statistics_layout.addRow("Total Products: ", self.total_products_label)
+        self.statistics_layout.addRow("Total Members: ", self.total_members_label)
+        self.statistics_layout.addRow("Sold Products: ", self.sold_products_label)
+        self.statistics_layout.addRow("Total Amount:  €", self.total_amount_label)
 
         self.statistics_groupbox.setLayout(self.statistics_layout)
         self.statistics_groupbox.setFont(QFont("Arial", 14))
         self.statistics_main_layout.addWidget(self.statistics_groupbox)
         self.tab3.setLayout(self.statistics_main_layout)
+        self.tabs.blockSignals(False)
 
     def func_add_product(self):
         self.new_product = add_product.AddProduct()
@@ -320,6 +324,26 @@ class Main(QMainWindow):
 
     def func_sell_product(self):
         self.sell = sales.SellProduct()
+
+    def get_statistics(self):
+        count_products = cur.execute("SELECT count(product_id) FROM product").fetchall()
+        count_members = cur.execute("SELECT count(member_id) FROM member").fetchall()
+        sold_products = cur.execute("SELECT SUM(sale_quantity) FROM sale").fetchall()
+        total_sales = cur.execute("SELECT SUM(sale_amount) FROM sale").fetchall()
+        count_products = count_products[0][0]
+        count_members = count_members[0][0]
+        sold_products = sold_products[0][0]
+        total_sales = total_sales[0][0]
+
+        self.total_products_label.setText(str(count_products))
+        self.total_members_label.setText(str(count_members))
+        self.sold_products_label.setText(str(sold_products))
+        self.total_amount_label.setText(str(total_sales))
+
+    def tab_changed(self):
+        self.get_statistics()
+        self.display_products()
+        self.display_members()
 
 
 class DisplayMember(QWidget):
